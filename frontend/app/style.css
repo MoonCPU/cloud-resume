@@ -68,7 +68,7 @@ body {
 @media (max-width: 600px) {
     #kilroy {
         width: 100px; 
-        left: 67%;
+        left: 65%;
         bottom: -5px;
     }
     h3 {
