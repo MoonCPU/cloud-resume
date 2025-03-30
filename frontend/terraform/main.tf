@@ -8,5 +8,11 @@ terraform {
 }
 
 provider "aws" {
-  region = "sa-east-1"
+  region = var.aws_region
+}
+
+# Call the S3 module
+module "frontend_s3_bucket" {
+  source     = "./modules/s3"
+  aws_region = var.aws_region
 }
