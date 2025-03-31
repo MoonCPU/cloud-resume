@@ -16,3 +16,9 @@ module "frontend_s3_bucket" {
   source     = "./modules/s3"
   aws_region = var.aws_region
 }
+
+module "cloud_front" {
+  source = "./modules/cloudFront"
+
+  s3_bucket_domain_name = module.frontend_s3_bucket.regional_domain_name
+}
