@@ -1,18 +1,13 @@
 async function updateVisitorCounter() {
     try {
-        // this will trigger the POST method in the Lambda Function API
-        await fetch('my-url', {
+        // send POST request to increment the count and get the updated value
+        const response = await fetch('my-url', {
             method: 'POST',
         });
 
-        // GET request to retrieve the updated visitor count
-        const response = await fetch('my-url', {
-            method: 'GET',
-        });
-
-        // Assuming the response contains a field called visitorCount
+        // parse the response and update the counter on the page
         const data = await response.json();
-        document.getElementById('visitorCount').innerText = data.visitorCount;
+        document.getElementById('visitorCount').innerText = data.count;
 
     } catch (error) {
         console.log(error);
