@@ -1,43 +1,223 @@
-module "frontend_s3_bucket" {
-  source     = "./modules/s3"
-  aws_region = var.aws_region
+terraform {
+   required_providers {
+     aws = {
+       source  = "hashicorp/aws"
+       version = "5.92.0"
+     }
+   }
+ }
+ 
+ provider "aws" {
+   region = var.aws_region
+ }
+
+// 1- setting up s3 for hosting static website
+
+resource "aws_s3_bucket" "frontend_bucket" {
+  bucket = var.s3_bucket_name
+
+    lifecycle {
+    prevent_destroy = false
+  }
 }
 
-module "route53_zones" {
-  source = "./modules/route53"
-  domain_name = var.domain_name
+resource "aws_s3_bucket_versioning" "frontend_versioning" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
-module "cloudfront" {
-  source = "./modules/cloudFront"
-  s3_bucket_domain_name = module.frontend_s3_bucket.regional_domain_name
-  hosted_zone_id = module.route53_zones.hosted_zone_id
+resource "aws_s3_bucket_ownership_controls" "frontend_ownership" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
 }
 
-module "route53_records" {
-  source  = "terraform-aws-modules/route53/aws//modules/records"
-  version = "~> 3.0"
+# blocking public access for security, cloudfront will serve the website content without exposing the s3 bucket
+resource "aws_s3_bucket_public_access_block" "frontend_access_block" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
 
-  zone_name = var.domain_name 
+resource "aws_s3_bucket_website_configuration" "frontend_website" {
+  bucket = aws_s3_bucket.frontend_bucket.id
 
-  records = [
-    {
-      name = ""
-      type = "A"
-      alias = {
-        name    = module.cloudfront.cloudfront_distribution_domain_name
-        zone_id = module.cloudfront.cloudfront_distribution_hosted_zone_id
-        evaluate_target_health = false
-      }
-    },
-    {
-      name = "www"
-      type = "A"
-      alias = {
-        name    = module.cloudfront.cloudfront_distribution_domain_name
-        zone_id = module.cloudfront.cloudfront_distribution_hosted_zone_id
-        evaluate_target_health = false
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "index.html"
+  }
+}
+
+# upload website files
+resource "aws_s3_object" "index_html" {
+  bucket       = aws_s3_bucket.frontend_bucket.id
+  key          = "index.html"
+  source       = "../app/index.html"
+  content_type = "text/html"
+}
+
+resource "aws_s3_object" "style_css" {
+  bucket       = aws_s3_bucket.frontend_bucket.id
+  key          = "style.css"
+  source       = "../app/style.css"
+  content_type = "text/css"
+}
+
+resource "aws_s3_object" "main_js" {
+  bucket       = aws_s3_bucket.frontend_bucket.id
+  key          = "main.js"
+  source       = "../app/main.js"
+  content_type = "application/javascript"
+}
+
+resource "aws_s3_object" "github_logo" {
+  bucket       = aws_s3_bucket.frontend_bucket.id
+  key          = "images/github.png"
+  source       = "../app/images/github.png"
+  content_type = "image/png"
+}
+
+resource "aws_s3_object" "linkedin_logo" {
+  bucket       = aws_s3_bucket.frontend_bucket.id
+  key          = "images/linkedin.png"
+  source       = "../app/images/linkedin.png"
+  content_type = "image/png"
+}
+
+resource "aws_s3_object" "kilroy_logo" {
+  bucket       = aws_s3_bucket.frontend_bucket.id
+  key          = "images/kilroy.png"
+  source       = "../app/images/kilroy.png"
+  content_type = "image/png"
+}
+
+// 2 - setting up cloudfront
+
+# the origin access control will access the private s3 bucket without making the bucket public
+resource "aws_cloudfront_origin_access_control" "s3_oac" {
+  name                              = "frontend-s3-oac"
+  description                       = "OAC for S3 bucket"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_distribution" "frontend_distribution" {
+  origin {
+    # this tells where cloud front fetch content from, in this case, the s3 "frontend_bucket" bucket
+    domain_name              = aws_s3_bucket.frontend_bucket.bucket_regional_domain_name
+    # custom name to identify this cloud front origin
+    origin_id                = "frontendS3Origin"
+    # links to the "s3_oac" oac 
+    origin_access_control_id = aws_cloudfront_origin_access_control.s3_oac.id
+  }
+
+  enabled             = true
+  default_root_object = "index.html"
+
+  default_cache_behavior {
+    # users can only send GET or HEAD request, and not other HTTP methods
+    allowed_methods  = ["GET", "HEAD"]
+    # cloudfront will only cache GET and HEAD operations, and not other HTTP methods
+    cached_methods   = ["GET", "HEAD"]
+    # this tells which origin to use
+    target_origin_id = "frontendS3Origin"
+
+    # forces all users to use HTTPS instead of HTTP.
+    viewer_protocol_policy = "redirect-to-https"
+    # reduce size of files for faster loading
+    compress               = true
+
+    forwarded_values {
+      # ignores query parameters in url
+      query_string = false
+      # cloudfront will not forward cookies to the s3
+      cookies {
+        forward = "none"
       }
     }
+  }
+
+  # determines which edge locations to store cache
+  # PriceClass_100 is the cheapest region: US, Canada, Europe
+  price_class = "PriceClass_100"
+
+  restrictions {
+    # no restriction on locations where users can access my website
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  # provide SSL certificate
+  viewer_certificate {
+    acm_certificate_arn      = var.acm_certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  # Alternate domain name (CNAME)
+  aliases = [
+    "moondev-cloud.com",
+    "www.moondev-cloud.com"
   ]
+}
+
+// allow cloudfront to access the private S3 bucket
+resource "aws_s3_bucket_policy" "frontend_bucket_policy" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowCloudFrontServicePrincipalReadOnly"
+        Effect    = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.frontend_bucket.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.frontend_distribution.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+// 3- setting up route53 to use our custom domain name
+
+resource "aws_route53_record" "frontend_record" {
+  zone_id = var.hosted_zone_id 
+  name    = "moondev-cloud.com"
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.frontend_distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.frontend_distribution.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "frontend_www_record" {
+  zone_id = var.hosted_zone_id  
+  name    = "www.moondev-cloud.com"
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.frontend_distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.frontend_distribution.hosted_zone_id
+    evaluate_target_health = false
+  }
 }
