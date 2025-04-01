@@ -49,6 +49,11 @@ resource "aws_iam_role" "lambda_role" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_logs_policy" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 # attach policy to allow lambda to write to dynamo
 resource "aws_iam_policy_attachment" "lambda_dynamodb_policy" {
   name       = "lambda_dynamodb_policy_attachment"
@@ -66,8 +71,8 @@ resource "aws_iam_policy_attachment" "lambda_logging" {
 # package the python script and dependencies
 data "archive_file" "lambda_package" {
   type        = "zip"
-  source_dir  = "${path.module}/../backend/package"
-  output_path = "${path.module}/../package/lambda_function.zip"
+  source_dir  = "${path.module}/../package"
+  output_path = "${path.module}/../lambda_function.zip"
 }
 
 resource "aws_lambda_function" "visitor_counter_lambda" {
@@ -87,6 +92,19 @@ resource "aws_lambda_function" "visitor_counter_lambda" {
 }
 
 // 3 - set up the endpoints to lambda using api gateway
+
+# grants API Gateway permission to invoke the Lambda function
+resource "aws_lambda_permission" "allow_api_gateway" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.visitor_counter_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.visitor_counter_api.execution_arn}/*/POST/count"
+
+#     lifecycle {
+#     ignore_changes = [source_arn]
+#   }
+}
 
 # creates an API Gateway instance for the visitor counter service
 resource "aws_api_gateway_rest_api" "visitor_counter_api" {
@@ -123,6 +141,11 @@ resource "aws_api_gateway_integration" "count_post_integration" {
 resource "aws_api_gateway_deployment" "visitor_counter_api_deployment" {
   rest_api_id = aws_api_gateway_rest_api.visitor_counter_api.id
 
+    depends_on = [
+        aws_api_gateway_integration.count_post_integration,
+        aws_lambda_permission.allow_api_gateway
+    ]
+
     # redeploys the API when there are changes.
     triggers = {
         redeployment = sha1(jsonencode(aws_api_gateway_rest_api.visitor_counter_api.body))
@@ -138,12 +161,12 @@ resource "aws_api_gateway_stage" "visitor_counter_api_stage" {
   deployment_id = aws_api_gateway_deployment.visitor_counter_api_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.visitor_counter_api.id
   stage_name    = "prod"
+
+    depends_on = [
+    aws_lambda_permission.allow_api_gateway
+  ]
 }
 
-# grants API Gateway permission to invoke the Lambda function
-resource "aws_lambda_permission" "allow_api_gateway" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.visitor_counter_lambda.function_name
-  principal     = "apigateway.amazonaws.com"
+output "api_gateway_endpoint" {
+  value = "${aws_api_gateway_deployment.visitor_counter_api_deployment.invoke_url}${aws_api_gateway_resource.count_resource.path_part}"
 }
