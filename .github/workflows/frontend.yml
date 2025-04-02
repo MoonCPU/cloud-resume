@@ -33,10 +33,10 @@ jobs:
         working-directory: frontend/terraform
         run: |
           cat <<EOF > backend-config.hcl
-          bucket         = "${{ secrets.S3_REMOTE_FRONTEND }}"
+          bucket         = "${{ secrets.S3_REMOTE_FRONT }}"
           key            = "terraform.tfstate"
           region         = "${{ secrets.AWS_REGION }}"
-          use_lock_table = true
+          dynamodb_table = "${{ secrets.STATE_LOCK_FRONT }}"
           encrypt        = true
           EOF
 
