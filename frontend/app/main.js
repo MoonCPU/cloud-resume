@@ -1,15 +1,17 @@
+document.addEventListener('DOMContentLoaded', function() {
+    updateVisitorCounter(); // Call the function as early as possible
+});
+
 async function updateVisitorCounter() {
     try {
-        // send POST request to increment the count and get the updated value
-        const response = await fetch('my-url', {
+        const response = await fetch("https://x7uijxsiec.execute-api.sa-east-1.amazonaws.com/prod/count", {
             method: 'POST',
         });
 
-        // parse the response and update the counter on the page
         const data = await response.json();
         document.getElementById('visitorCount').innerText = data.count;
 
     } catch (error) {
-        console.log(error);
+        console.error("Error updating visitor counter:", error);
     }
 }

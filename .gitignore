@@ -7,3 +7,4 @@ terraform.tfvars
 .terraform.tfstate.lock.info
 package
 lambda_function.zip
+config.js
