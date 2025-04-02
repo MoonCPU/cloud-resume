@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function updateVisitorCounter() {
     try {
-        const response = await fetch("https://x7uijxsiec.execute-api.sa-east-1.amazonaws.com/prod/count", {
+        const response = await fetch("https://09nl2fu77l.execute-api.sa-east-1.amazonaws.com/prod/count", {
             method: 'POST',
         });
 
