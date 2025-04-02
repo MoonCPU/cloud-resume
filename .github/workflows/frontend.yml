@@ -33,10 +33,6 @@ jobs:
         working-directory: frontend/terraform
         run: terraform init
 
-      - name: Plan Terraform Changes
-        working-directory: frontend/terraform
-        run: terraform plan
-
       - name: Generate terraform.tfvars
         working-directory: frontend/terraform
         run: |
@@ -47,6 +43,10 @@ jobs:
           s3_bucket_name = "${{ secrets.S3_BUCKET_NAME }}"
           hosted_zone_id = "${{ secrets.HOSTED_ZONE_ID }}"
           EOF
+
+      - name: Plan Terraform Changes
+        working-directory: frontend/terraform
+        run: terraform plan
 
       - name: Apply Terraform
         working-directory: frontend/terraform
