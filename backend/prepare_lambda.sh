@@ -1,7 +1,7 @@
 #!/bin/bash
-mkdir -p package
+set -e  
 
-pip freeze > requirements.txt
+mkdir -p package
 
 pip install -r requirements.txt -t package/
 
