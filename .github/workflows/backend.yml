@@ -17,56 +17,67 @@ jobs:
             - name: Checkout Repository
               uses: actions/checkout@v4
       
-            - name: Install Terraform
-              uses: hashicorp/setup-terraform@v3
-              with:
-                terraform_version: "latest"
+            # - name: Install Terraform
+            #   uses: hashicorp/setup-terraform@v3
+            #   with:
+            #     terraform_version: "latest"
 
-            - name: Configure AWS Credentials
-              uses: aws-actions/configure-aws-credentials@v4.1.0
-              with:
-                aws-region: sa-east-1
-                aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-                aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            # - name: Configure AWS Credentials
+            #   uses: aws-actions/configure-aws-credentials@v4.1.0
+            #   with:
+            #     aws-region: sa-east-1
+            #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+
+            - name: Debug Requirements File
+              run: |
+                echo "Checking requirements.txt"
+                cat ./backend/requirements.txt
+
+            - name: Debug Lambda Function File
+              run: |
+                echo "Listing backend directory:"
+                ls -R backend/
             
-            - name: Copy lambda_function.py to package folder
-              run: |
-                chmod +x ./backend/prepare_lambda.sh
-                ./backend/prepare_lambda.sh
-                if [ ! -f "./backend/package/lambda.zip" ]; then
-                  echo "Lambda package was not created! Exiting."
-                  exit 1
-                fi
+            # - name: Copy lambda_function.py to package folder
+            #   run: |
+            #     chmod +x ./backend/prepare_lambda.sh
+            #     ./backend/prepare_lambda.sh
+            #     if [ ! -f "./backend/package/lambda.zip" ]; then
+            #       echo "Lambda package was not created! Exiting."
+            #       exit 1
+            #     fi
 
-            - name: Generate backend-config.hcl (Backend)
-              working-directory: backend/terraform
-              run: |
-                cat <<EOF > backend-config.hcl
-                bucket         = "${{ secrets.S3_REMOTE_BACK }}"
-                key            = "terraform.tfstate"
-                region         = "${{ secrets.AWS_REGION }}"
-                dynamodb_table = "${{ secrets.STATE_LOCK_BACK }}"
-                encrypt        = true
-                EOF
+            # - name: Generate backend-config.hcl (Backend)
+            #   working-directory: backend/terraform
+            #   run: |
+            #     cat <<EOF > backend-config.hcl
+            #     bucket         = "${{ secrets.S3_REMOTE_BACK }}"
+            #     key            = "terraform.tfstate"
+            #     region         = "${{ secrets.AWS_REGION }}"
+            #     dynamodb_table = "${{ secrets.STATE_LOCK_BACK }}"
+            #     encrypt        = true
+            #     EOF
 
-            - name: Generate terraform.tfvars
-              working-directory: backend/terraform
-              run: |
-                cat <<EOF > terraform.tfvars
-                aws_region = "${{ secrets.AWS_REGION }}"
-                aws_dynamodb_table_name = "${{ secrets.AWS_DYNAMODB_TABLE_NAME }}"
-                s3_remote_back = "${{ secrets.S3_REMOTE_BACK }}"
-                state_lock_back = "${{ secrets.STATE_LOCK_BACK }}"
-                EOF
+            # - name: Generate terraform.tfvars
+            #   working-directory: backend/terraform
+            #   run: |
+            #     cat <<EOF > terraform.tfvars
+            #     aws_region = "${{ secrets.AWS_REGION }}"
+            #     aws_dynamodb_table_name = "${{ secrets.AWS_DYNAMODB_TABLE_NAME }}"
+            #     s3_remote_back = "${{ secrets.S3_REMOTE_BACK }}"
+            #     state_lock_back = "${{ secrets.STATE_LOCK_BACK }}"
+            #     EOF
 
-            - name: Initialize Terraform
-              working-directory: backend/terraform
-              run: terraform init -reconfigure -backend-config=backend-config.hcl
+            # - name: Initialize Terraform
+            #   working-directory: backend/terraform
+            #   run: terraform init -reconfigure -backend-config=backend-config.hcl
 
-            - name: Plan Terraform Changes
-              working-directory: backend/terraform
-              run: terraform plan
+            # - name: Plan Terraform Changes
+            #   working-directory: backend/terraform
+            #   run: terraform plan
 
-            - name: Apply Terraform
-              working-directory: backend/terraform
-              run: terraform apply -auto-approve
+            # - name: Apply Terraform
+            #   working-directory: backend/terraform
+            #   run: terraform apply -auto-approve
