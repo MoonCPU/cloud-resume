@@ -38,8 +38,8 @@ jobs:
             - name: Copy lambda_function.py to package folder
               working-directory: backend
               run: |
-                chmod +x ./backend/prepare_lambda.sh
-                ./backend/prepare_lambda.sh
+                chmod +x prepare_lambda.sh
+                ./prepare_lambda.sh
 
             - name: Generate backend-config.hcl (Backend)
               working-directory: backend/terraform
