@@ -10,6 +10,8 @@ The project consists of two major components:
 - Frontend: A static website hosted on AWS S3 and served via CloudFront.
 - Backend: A serverless API built using AWS Lambda, API Gateway, and DynamoDB to track visitor counts.
 
+![6](https://github.com/user-attachments/assets/a1237ea6-2b81-48f6-9077-960efbd7e9ad)
+
 ## Technologies Used
 [![My Skills](https://skillicons.dev/icons?i=python,html,css,javascript,github,githubactions,aws,terraform)](https://skillicons.dev)
 
