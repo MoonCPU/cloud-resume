@@ -36,7 +36,7 @@ jobs:
           bucket         = "${{ secrets.S3_REMOTE_FRONTEND }}"
           key            = "terraform.tfstate"
           region         = "${{ secrets.AWS_REGION }}"
-          dynamodb_table = "${{ secrets.STATE_LOCK_FRONTEND }}"
+          use_lock_table = true
           encrypt        = true
           EOF
 
