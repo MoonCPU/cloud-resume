@@ -36,6 +36,7 @@ jobs:
                 cat ./backend/requirements.txt
             
             - name: Copy lambda_function.py to package folder
+              working-directory: backend
               run: |
                 chmod +x ./backend/prepare_lambda.sh
                 ./backend/prepare_lambda.sh
