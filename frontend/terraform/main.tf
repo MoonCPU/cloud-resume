@@ -58,47 +58,24 @@ resource "aws_s3_bucket_website_configuration" "frontend_website" {
   }
 }
 
-# upload website files
-resource "aws_s3_object" "index_html" {
-  bucket       = aws_s3_bucket.frontend_bucket.id
-  key          = "index.html"
-  source       = "../app/index.html"
-  content_type = "text/html"
+variable "frontend_files" {
+  type    = map(string)
+  default = {
+    "index.html"    = "../app/index.html"
+    "style.css"     = "../app/style.css"
+    "main.js"       = "../app/main.js"
+    "images/github.png"   = "../app/images/github.png"
+    "images/kilroy.png"   = "../app/images/kilroy.png"
+    "images/linkedin.png" = "../app/images/linkedin.png"
+  }
 }
 
-resource "aws_s3_object" "style_css" {
+resource "aws_s3_object" "frontend_files" {
+  for_each     = var.frontend_files
   bucket       = aws_s3_bucket.frontend_bucket.id
-  key          = "style.css"
-  source       = "../app/style.css"
-  content_type = "text/css"
-}
-
-resource "aws_s3_object" "main_js" {
-  bucket       = aws_s3_bucket.frontend_bucket.id
-  key          = "main.js"
-  source       = "../app/main.js"
-  content_type = "application/javascript"
-}
-
-resource "aws_s3_object" "github_logo" {
-  bucket       = aws_s3_bucket.frontend_bucket.id
-  key          = "images/github.png"
-  source       = "../app/images/github.png"
-  content_type = "image/png"
-}
-
-resource "aws_s3_object" "linkedin_logo" {
-  bucket       = aws_s3_bucket.frontend_bucket.id
-  key          = "images/linkedin.png"
-  source       = "../app/images/linkedin.png"
-  content_type = "image/png"
-}
-
-resource "aws_s3_object" "kilroy_logo" {
-  bucket       = aws_s3_bucket.frontend_bucket.id
-  key          = "images/kilroy.png"
-  source       = "../app/images/kilroy.png"
-  content_type = "image/png"
+  key          = each.key
+  source       = each.value
+  etag         = filemd5(each.value)  # forces an update if file contents change
 }
 
 // 2 - setting up cloudfront

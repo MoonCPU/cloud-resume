@@ -8,6 +8,7 @@ async function updateVisitorCounter() {
             method: 'POST',
         });
 
+        
         const data = await response.json();
         document.getElementById('visitorCount').innerText = data.count;
 
