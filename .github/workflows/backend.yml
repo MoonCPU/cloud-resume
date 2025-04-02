@@ -1,0 +1,55 @@
+name: Deploy Backend to AWS
+
+on:
+    push:
+      branches:
+        - main
+      paths:
+        - 'backend/**' 
+    workflow_dispatch: 
+
+jobs:
+    deploy-backend:
+        name: Deploy Backend
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+      
+            - name: Install Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                terraform_version: "latest"
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v4.1.0
+              with:
+                aws-region: sa-east-1
+                aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            
+            - name: Copy lambda_function.py to package folder
+              run: |
+                chmod +x ./backend/prepare_lambda.sh
+                ./backend/prepare_lambda.sh
+
+            - name: Initialize Terraform
+              working-directory: backend/terraform
+              run: terraform init
+
+            - name: Generate terraform.tfvars
+              working-directory: frontend/terraform
+              run: |
+                cat <<EOF > terraform.tfvars
+                aws_region = "${{ secrets.AWS_REGION }}"
+                aws_dynamodb_table_name = "${{ secrets.AWS_DYNAMODB_TABLE_NAME }}"
+                EOF
+
+            - name: Plan Terraform Changes
+              working-directory: frontend/terraform
+              run: terraform plan
+
+            - name: Apply Terraform
+              working-directory: frontend/terraform
+              run: terraform apply -auto-approve
