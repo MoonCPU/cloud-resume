@@ -28,10 +28,17 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "latest"
-      
-      - name: Initialize Terraform
+
+      - name: Generate backend-config.hcl (Frontend)
         working-directory: frontend/terraform
-        run: terraform init
+        run: |
+          cat <<EOF > backend-config.hcl
+          bucket         = "${{ secrets.S3_REMOTE_FRONTEND }}"
+          key            = "terraform.tfstate"
+          region         = "${{ secrets.AWS_REGION }}"
+          dynamodb_table = "${{ secrets.STATE_LOCK_FRONTEND }}"
+          encrypt        = true
+          EOF
 
       - name: Generate terraform.tfvars
         working-directory: frontend/terraform
@@ -42,7 +49,13 @@ jobs:
           acm_certificate_arn = "${{ secrets.ACM_CERTIFICATE_ARN }}"
           s3_bucket_name = "${{ secrets.S3_BUCKET_NAME }}"
           hosted_zone_id = "${{ secrets.HOSTED_ZONE_ID }}"
+          s3_remote_front = "${{ secrets.S3_REMOTE_FRONT }}"
+          state_lock_front = "${{ secrets.STATE_LOCK_FRONT }}"
           EOF
+
+      - name: Initialize Terraform
+        working-directory: frontend/terraform
+        run: terraform init -backend-config="backend-config.hcl"
 
       - name: Plan Terraform Changes
         working-directory: frontend/terraform

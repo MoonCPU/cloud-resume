@@ -8,3 +8,5 @@ terraform.tfvars
 package
 lambda_function.zip
 config.js
+infra
+backend-config.hcl
