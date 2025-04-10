@@ -75,7 +75,20 @@ resource "aws_s3_object" "frontend_files" {
   bucket       = aws_s3_bucket.frontend_bucket.id
   key          = each.key
   source       = each.value
-  etag         = filemd5(each.value)  # forces an update if file contents change
+  etag         = filemd5(each.value)
+
+  content_type = lookup(
+    {
+      "index.html"             = "text/html"
+      "style.css"              = "text/css"
+      "main.js"                = "application/javascript"
+      "images/github.png"      = "image/png"
+      "images/kilroy.png"      = "image/png"
+      "images/linkedin.png"    = "image/png"
+    },
+    each.key,
+    "application/octet-stream" # fallback
+  )
 }
 
 // 2 - setting up cloudfront
