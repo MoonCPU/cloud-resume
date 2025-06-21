@@ -1,4 +1,4 @@
-<h1 align="center" color="red">Cloud Resume [DISABLED]</h1>
+<h1 align="center" color="red">Cloud Resume</h1>
 
 ## Overview
 This project is my implementation of the [Cloud Resume Challenge](https://cloudresumechallenge.dev/docs/the-challenge/aws/), which integrates both frontend and backend components to create a fully deployed, cloud-based resume. The main feature of this resume is a visitor counter, which tracks the number of visits using AWS services.
